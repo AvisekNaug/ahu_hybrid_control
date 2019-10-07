@@ -1,0 +1,6 @@
+#folders
+.vscode/
+.ipynb_checkpoints/
+data/
+
+#extensions
