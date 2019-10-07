@@ -4,3 +4,5 @@
 data/
 
 #extensions
+*.code-workspace
+*.joblib
