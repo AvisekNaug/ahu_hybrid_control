@@ -2,6 +2,7 @@
 .vscode/
 .ipynb_checkpoints/
 data/
+.idea/
 
 #extensions
 *.code-workspace
