@@ -2,11 +2,9 @@ import glob
 from pandas import *
 from scipy import stats
 import os
-import numpy as np
-
 
 # Helper methods for the data collection
-def fileReader(pathtofile, dateheading, format='%m/%d/%Y %H:%M', offset=0):
+def fileReader(pathtofile, dateheading, format='%m/%d/%Y %H:%M', offset=0, metasys=False):
     """
     reads files in Bdx format and returns a list of data frames with parsed time
     :param pathtofile: type str; the folder or path from which we read individula .csv or .excel files
@@ -25,19 +23,28 @@ def fileReader(pathtofile, dateheading, format='%m/%d/%Y %H:%M', offset=0):
             df = read_excel(filename)
 
         # Parsing the Date column
-        try:
-            df.insert(loc=0, column='Dates',
-                      value=to_datetime(df[dateheading],
-                                        format=format) + DateOffset(hours=offset))
-        except ValueError:
+        if not metasys:
             try:
                 df.insert(loc=0, column='Dates',
                           value=to_datetime(df[dateheading],
-                                            format='%m/%d/%Y %H:%M') + DateOffset(hours=offset))
+                                            format=format) + DateOffset(hours=offset))
             except ValueError:
-                df.insert(loc=0, column='Dates',
-                          value=to_datetime(df[dateheading],
-                                            format='%Y-%m-%d %H:%M:%S') + DateOffset(hours=offset))
+                try:
+                    df.insert(loc=0, column='Dates',
+                              value=to_datetime(df[dateheading],
+                                                format='%m/%d/%Y %H:%M') + DateOffset(hours=offset))
+                except ValueError:
+                    df.insert(loc=0, column='Dates',
+                              value=to_datetime(df[dateheading],
+                                                format='%Y-%m-%d %H:%M:%S') + DateOffset(hours=offset))
+        else:
+            c = []
+            for i in df[dateheading]:
+                try:
+                    c.append(to_datetime(i, format='%m/%d/%y, %I:%M:%S %p CDT') + DateOffset(hours=-1))
+                except ValueError:
+                    c.append(to_datetime(i, format='%m/%d/%y, %I:%M:%S %p CST'))
+            df.insert(loc=0, column='Dates', value=c)
 
         df.drop(dateheading, axis=1, inplace=True)  # Drop original Time column
 
@@ -116,14 +123,12 @@ def removeOutliers(df, columnnames, z_thresh=3):
     :param z_thresh: remove points beyond threshold*sima std deviations
     :return: cleaned dateframe
     """
-    if columnnames == []:
-        columnnames = df.columns
-    for column_name in columnnames:
-        # Constrains will contain `True` or `False` depending on if it is a value below the threshold.
-        constraints = stats.zscore(df[column_name]) < z_thresh
-        # Drop (inplace) values set to be rejected
-        df.drop(df.index[~constraints], inplace=True)
-
+    if columnnames:
+        for column_name in columnnames:
+            # Constrains will contain `True` or `False` depending on if it is a value below the threshold.
+            constraints = abs(stats.zscore(df[column_name]))< z_thresh
+            # Drop (inplace) values set to be rejected
+            df.drop(df.index[~constraints], inplace=True)
     return df
 
 
@@ -197,14 +202,13 @@ def rowAverage(df, columnName):
 
     return dfavg
 
-# standard preprocessing on the dataframe
 def createdataframe(datapath: list, datecolumn_name: list, dateformat: list, outliers: list,
-                    time_offset: list, period: int = 1, limit: float = 0.1, **kwargs):
+                      time_offset: list, metasys: list, period: int = 1, limit: float = 0.1, **kwargs):
 
     assert len(datapath)!=0, "No datapaths provided"
 
     dflist = []
-    for i, j, k, l, p in zip(datapath, datecolumn_name, dateformat, time_offset, outliers):
+    for i, j, k, l, p, q in zip(datapath, datecolumn_name, dateformat, time_offset, outliers, metasys):
 
         # check whether it is a string
         assert type(i)==str, "Data path is not a string. It is of type {}.".format(type(i))
@@ -212,7 +216,7 @@ def createdataframe(datapath: list, datecolumn_name: list, dateformat: list, out
         assert os.path.exists(i), "Directory {} does not exist.".format(i)
 
         # read the excel file into a dataframe
-        df = fileReader(i, j, format=k, offset = l)
+        df = fileReader(i, j, format=k, offset = l, metasys=q)
         # merge list of dfs along the row axis
         df = merge_df_rows(df)
         # remove outliers
