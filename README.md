@@ -1,1 +1,3 @@
-Implementing the hybrid control
+## Implementing the hybrid control
+
+1. Read the BdX data
