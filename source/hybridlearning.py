@@ -1,7 +1,7 @@
 # import  modules
 from helperfunctions import *
 
-# read the relevantdata
+# read the relevant data
 data_path = ['../data/AHU1_data/']
 date_column_name = ['Date']
 date_format = ['%m/%d/%Y %H:%M']
