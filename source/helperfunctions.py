@@ -90,7 +90,7 @@ def merge_df_rows(dlist):
     """
 
     # Create Dataframe from the dlist files
-    dframe = concat(dlist, axis=0, join='outer', sort=True)
+    dframe = concat(dlist, axis=0, join='outer', sort=False)
 
     # Sort the df based on the datetime index
     dframe.sort_values(by='Dates', inplace=True)
@@ -110,7 +110,7 @@ def merge_df_columns(dlist):
     :param dlist: list of dataframes to be along column axis
     :return: concatenated dataframe
     """
-    dframe = concat(dlist, axis=1, join='outer', sort=True)
+    dframe = concat(dlist, axis=1, join='outer', sort=False)
 
     return dframe
 
@@ -242,3 +242,20 @@ def createdataframe(datapath: list, datecolumn_name: list, dateformat: list, out
     # df = df.reindex(columns=desired_order)
 
     return df
+
+# data inspection
+def datainspect(df):
+    from matplotlib import pyplot as plt
+    plt.rcParams["figure.figsize"] = (20,30)
+    fig,ax = plt.subplots(df.shape[1],1)
+    for i,j in zip(df.columns,range(df.shape[1])):
+        df.plot(y=[i],ax=ax[j],style=['b--'])
+
+def removeoldresults(resultsdir):
+    # Remove previous Results and LogInfo Folder
+    try:
+        os.mkdir(resultsdir)
+    except FileExistsError:
+        files = os.listdir(resultsdir + '/')
+        for f in files:
+            os.remove(resultsdir + '/' + f)
