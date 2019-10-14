@@ -219,12 +219,12 @@ def createdataframe(datapath: list, datecolumn_name: list, dateformat: list, out
         df = fileReader(i, j, format=k, offset = l, metasys=q)
         # merge list of dfs along the row axis
         df = merge_df_rows(df)
-        # remove outliers
-        df = removeOutliers(df, p)
-        # remove extremley sparse values
+        # remove extremely sparse values
         df = removeSparseCols(df, limit=limit)
         # remove missing rows
         df = droprows(df)
+        # remove outliers
+        df = removeOutliers(df, p)
         # # keep columns
         # if q:
         #     df = df.filter(items=q)
