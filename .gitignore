@@ -9,3 +9,4 @@ ResultsAHU2/
 #extensions
 *.code-workspace
 *.joblib
+.*pyc
