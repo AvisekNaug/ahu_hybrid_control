@@ -8,13 +8,13 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from pandas import *
 
-#Importing my own packages which may contain some bugs
+# Importing my own packages which may contain some bugs
 import Energy_Calc
 
 from joblib import dump, load
 import importlib
 
-#need to run this if I make changes to Energy_Calc and other modules
+# need to run this if I make changes to Energy_Calc and other modules
 importlib.reload(Energy_Calc)
 from Energy_Calc import Energy_Calc
 

@@ -163,4 +163,7 @@ class Energy_Calc():
         else:
             return 0
         #totalData['Reheat_energy'] = totalData.apply(lambda x: ReheatEnergy(x) , axis=1)
+
+    def preheatenergy(self,airflow,oat,pht_stp):
+        pass
         
