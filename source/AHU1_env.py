@@ -1,8 +1,6 @@
 # importing the modules for reading the data and pre-processing it
 from pandas import *
-import numpy as np
 from joblib import dump, load
-from . helperfunctions import merge_df_rows
 
 # importing the modules for setting up the environment from which the
 # algorithm learns the control policy to be implemented
@@ -17,16 +15,11 @@ from .Energy_Calc import *
 # interacts with. It inherits some properties from the gym imported earlier
 class Env(gym.Env):
 
-    def __int__(self, datapath, modelpath: list, period = 6):
+    def __int__(self, datapath, period = 6):
 
         # State Space variables
         self.vars = ['OAT', 'RH', 'AirFlow', 'CC_T',  'PH_T', 'SAT', 'TotalE']
         self.states = ['OAT', 'RH', 'AirFlow', 'PH_T', 'SAT']
-
-        # Here we initialize the data driven model for evaluating energy
-        # The weights and biases of the models are stored in a file
-        self.precoolmodel = load(modelpath[0])
-        self.recovheatmodel = load(modelpath[1])
 
         # data to be used for training and testing
         self.traindataset = read_pickle(datapath)
@@ -49,10 +42,10 @@ class Env(gym.Env):
         self.Stats = self.traindataset.describe().iloc[[1, 2, 3, 7], :-1]
 
         # Windowed Stats: Assuming a window of 24 hours
-        self.win_len = int(1440 / (5 * self.period))
-        self.windowMean = self.traindataset.rolling(self.win_len, min_periods=1).mean()['OAT']
-        self.windowMax = self.traindataset.rolling(self.win_len, min_periods=1).max()['OAT']
-        self.windowMin = self.traindataset.rolling(self.win_len, min_periods=1).min()['OAT']
+        # self.win_len = int(1440 / (5 * self.period))
+        # self.windowMean = self.traindataset.rolling(self.win_len, min_periods=1).mean()['OAT']
+        # self.windowMax = self.traindataset.rolling(self.win_len, min_periods=1).max()['OAT']
+        # self.windowMin = self.traindataset.rolling(self.win_len, min_periods=1).min()['OAT']
 
         # Standard requirements for interfacing with Keras-RL's code
         SpaceLB = [self.Stats.iloc[2, i] for i in range(self.n - self.numactions)]
@@ -81,13 +74,11 @@ class Env(gym.Env):
         self.episodelength = int(10080 / (period * 5))  # eg 336 steps when period = 6 ie 30 mins interval
 
         '''Resetting the environment to its initial value'''
-        self.S = self.traindataset.iloc[self.dataPtr, :-1]  # Added to the control action generated
-        self.state = self.S[self.states].to_numpy().flatten()
+        self.S = self.traindataset.iloc[self.dataPtr, :-1]
+        self.state = self.S[self.states]
 
         # Models needed for calcualting physics of the AHU
         self.energyCalc = Energy_Calc()
-        # passing updated values before calculation
-        self.energyCalc.updateVars(self.S)
 
     def testenv(self):
         self.testing = True
@@ -104,30 +95,96 @@ class Env(gym.Env):
         # reheat set point
         rht_stp = controlact[1]
         # airflow rate
-        airflow = self.S['AirFlow']
+        airflow = self.state['AirFlow']
         # outside air temperature
-        oat = self.S['OAT']
+        oat = self.state['OAT']
         # cooling coil exit temperature
-        cc_t = self.S['CC_T']
+        cc_t = self.state['CC_T']
+        # outside relative humidity
+        orh = self.state['RH']/100
 
         # Calculate the preheat energy consumption assuming
         # we attain the pht_stp from oat
-        if oat<52:
-            pht_energy = self.energyCalc.preheatenergy(airflow,
-                                                       oat,
-                                                       pht_stp)
-            pht_temp = pht_stp
+        if oat<=52:
+
+            # resultant preheat output temperature
+            ph_temp = pht_stp
+
+            # calculate preheat energy and resultant relative humidity
+            pht_energy, pht_out_rh, pht_energy_hist, pht_out_rh_hist = \
+                self.energyCalc.preheatenergy(airflow, oat, ph_temp, orh)
+
+            # calculate pre cool temp and resultant relative humidity
+            precooltemp, pc_out_rh, precooltemp_hist, pc_out_rh_hist = \
+                self.energyCalc.precooltemp(ph_temp, airflow, pht_out_rh, pht_out_rh_hist)
+
+            # calculate cooling energy and resultant relative humidity
+            cooling_energy, cc_out_rh, cooling_energy_hist, cc_out_rh_hist = 0, pc_out_rh, 0, pc_out_rh_hist
+
+            # calculate recovheat temperature and resultant relative humidity
+            recovtemp, rec_outrh = self.energyCalc.recovheattemp(oat, ph_temp, cc_t,
+                                                                 airflow, cc_out_rh, cc_out_rh_hist)
+
+            # calculate reheat energy consumption and resultant relative humidity
+            reheat_energy, sat_outrh, sat = 0, rec_outrh, recovtemp
+
+
         else:
-            pht_energy = 0
-            pht_temp = self.S['PH_T']
 
-        # calculate precool temp
-        precooltemp = self.precoolmodel(pht_temp, airflow)
+            # resultant preheat output temperature
+            ph_temp = 75
 
-        # calculate cooling energy
-        cooling_energy = self.energyCalc.CoolingEnergy(precooltemp, cc_t, airflow)
+            # calculate preheat energy and resultant relative humidity
+            pht_energy, pht_out_rh, pht_energy_hist, pht_out_rh_hist = 0, orh, 0, orh
 
-        # calculate recovheat temperature
-        recovtemp = self.recovheatmodel(oat, pht_temp, cc_t, airflow)
+            # calculate pre cool temp and resultant relative humidity
+            precooltemp, pc_out_rh, precooltemp_hist, pc_out_rh_hist =\
+                self.energyCalc.precooltemp(ph_temp, airflow, pht_out_rh, pht_out_rh_hist)
 
-        # calculate
+            # calculate cooling energy and resultant relative humidity
+            cooling_energy, cc_out_rh, cooling_energy_hist, cc_out_rh_hist = \
+                self.energyCalc.coolingenergy(precooltemp, cc_t, airflow,
+                                              pc_out_rh, pc_out_rh_hist, precooltemp_hist)
+
+            # calculate recovheat temperature and resultant relative humidity
+            recovtemp, rec_outrh = self.energyCalc.recovheattemp(oat, ph_temp, cc_t,
+                                                                 airflow, cc_out_rh, cc_out_rh_hist)
+
+            # supply air temperature
+            sat = rht_stp
+
+            # calculate reheat energy consumption and resultant relative humidity
+            reheat_energy, outrh = self.energyCalc.ReheatEnergy(recovtemp, sat, airflow, rec_outrh)
+
+        # calculate reward:
+        reward = -pht_energy -cooling_energy -reheat_energy
+
+        # move ahead in time
+        self.dataPtr += 1
+        self.counter += 1
+
+        # adjust proper indexing of sequential train and test data
+        if not self.testing:
+            if self.dataPtr > self.traindatalimit - 1:
+                self.dataPtr = 0
+        else:
+            if self.dataPtr > self.testdatalimit - 1:
+                self.dataPtr = self.traindatalimit
+        # see if episode has ended
+        if self.counter>self.episodelength-1:
+            done=True
+
+        # step to the next state
+        self.S = self.traindataset.iloc[self.dataPtr, :-1]
+        self.state = self.S[self.states]
+
+        # change states based on actions
+        self.state['PHT'] = ph_temp
+        self.state['SAT'] = sat
+
+    def reset(self):
+        self.S = self.traindataset.iloc[self.dataPtr, :-1]
+        self.state = self.S[self.states]
+        self.counter = 0
+        self.steps_beyond_done = None
+        return self.state
