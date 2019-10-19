@@ -119,20 +119,22 @@ class Env(gym.Env):
                 self.energyCalc.precooltemp(ph_temp, airflow, pht_out_rh, pht_out_rh_hist)
 
             # calculate cooling energy and resultant relative humidity
-            cooling_energy, cc_out_rh, cooling_energy_hist, cc_out_rh_hist = 0, pc_out_rh, 0, pc_out_rh_hist
+            cooling_energy, cc_out_rh, cooling_energy_hist, cc_out_rh_hist = \
+                0, pc_out_rh, 0, pc_out_rh_hist
 
             # calculate recovheat temperature and resultant relative humidity
-            recovtemp, rec_outrh = self.energyCalc.recovheattemp(oat, ph_temp, cc_t,
-                                                                 airflow, cc_out_rh, cc_out_rh_hist)
+            recovtemp, recov_out_rh, recovtemp_hist, recov_out_rh_hist = \
+                self.energyCalc.recovheattemp(oat, ph_temp, cc_t,
+                                              airflow, cc_out_rh, cc_out_rh_hist)
 
             # calculate reheat energy consumption and resultant relative humidity
-            reheat_energy, sat_outrh, sat = 0, rec_outrh, recovtemp
-
-
+            rht_energy, sat_out_rh, sat, \
+            rht_energy_hist, sat_out_rh_hist, sat_hist = \
+                0, recov_out_rh, recovtemp, \
+                0, recov_out_rh_hist, recovtemp_hist
         else:
-
             # resultant preheat output temperature
-            ph_temp = 75
+            ph_temp = oat
 
             # calculate preheat energy and resultant relative humidity
             pht_energy, pht_out_rh, pht_energy_hist, pht_out_rh_hist = 0, orh, 0, orh
@@ -147,17 +149,22 @@ class Env(gym.Env):
                                               pc_out_rh, pc_out_rh_hist, precooltemp_hist)
 
             # calculate recovheat temperature and resultant relative humidity
-            recovtemp, rec_outrh = self.energyCalc.recovheattemp(oat, ph_temp, cc_t,
-                                                                 airflow, cc_out_rh, cc_out_rh_hist)
+            recovtemp, recov_out_rh, recovtemp_hist, recov_out_rh_hist = \
+                self.energyCalc.recovheattemp(oat, ph_temp, cc_t,
+                                              airflow, cc_out_rh, cc_out_rh_hist)
 
             # supply air temperature
             sat = rht_stp
+            sat_hist = self.S['SAT']
 
             # calculate reheat energy consumption and resultant relative humidity
-            reheat_energy, outrh = self.energyCalc.ReheatEnergy(recovtemp, sat, airflow, rec_outrh)
+            rht_energy, rht_out_rh , rht_energy_hist, rht_out_rh_hist = \
+                self.energyCalc.reheatenergy(airflow, recovtemp, recov_out_rh,
+                                             recovtemp_hist, recov_out_rh_hist,
+                                             sat, sat_hist)
 
         # calculate reward:
-        reward = -pht_energy -cooling_energy -reheat_energy
+        reward = -pht_energy -cooling_energy -rht_energy
 
         # move ahead in time
         self.dataPtr += 1
@@ -171,8 +178,9 @@ class Env(gym.Env):
             if self.dataPtr > self.testdatalimit - 1:
                 self.dataPtr = self.traindatalimit
         # see if episode has ended
+        done = False
         if self.counter>self.episodelength-1:
-            done=True
+            done = True
 
         # step to the next state
         self.S = self.traindataset.iloc[self.dataPtr, :-1]
@@ -181,6 +189,8 @@ class Env(gym.Env):
         # change states based on actions
         self.state['PHT'] = ph_temp
         self.state['SAT'] = sat
+
+        return self.state, reward, done, {}
 
     def reset(self):
         self.S = self.traindataset.iloc[self.dataPtr, :-1]
