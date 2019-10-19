@@ -124,49 +124,32 @@ def train_agent(agent, env, steps=30000, dest='agent_weights.h5f'):
     return train_metrics
 
 
-class ActionSequence(Callback):
+class PerformanceMetrics(Callback):
     """
-    Store the history of actions taken by the agent. Useful for evaluating the
-    agent's performance. Stores actions in a list of lists of episodes:
-        [
-            [a1, a2, a3],        (episode 1)
-            [a1, a2, a3, a4, a5] (episode 2)
-        ]
+    Store the history of performance metrics. Useful for evaluating the
+    agent's performance:
     """
 
-    def __init__(self, actions=[], oats = [], rl_energies = [],
-                 idxs = [], old_energies = []):
-        self.actions = actions  # all actions listed by episode
-        self.OATs = oats
-        self.rl_energies = rl_energies
-        self.idxs = idxs
-        self.old_energies = old_energies
+    def __init__(self, metrics=[]):
+        self.metrics = [] # store perf metrics for each episode
         super().__init__()
 
     def on_episode_begin(self, episode, logs={}):
-        self.action = []  # actions in a single episode
-        self.OAT = []  # outside air temperatures
-        self.rl_energy = []  # controlled energy
-        self.idx = []  # Just for indexing
-        self.old_energy = []  # Store energy based on building controller
+        self.metric = {}  # store performance metrics
 
     def on_episode_end(self, episode, logs={}):
-        self.actions.append(self.action)
-        self.OATs.append(self.OAT)
-        self.rl_energies.append(self.rl_energy)
-        self.idxs.append(self.idx)
-        self.old_energies.append(self.old_energy)
+        self.metrics.append(self.metric)
 
     def on_step_end(self, step, logs={}):
-        self.action.append(logs.get('action')[0])
-        self.OAT.append(logs.get('info')['OAT'])
-        self.rl_energy.append(logs.get('info')['rl_energy'])
-        self.idx.append(logs.get('info')['dataidx'])
-        self.old_energy.append(logs.get('info')['old_energy'])
+        for key, value in logs.get('info'):
+            if key in self.metric:
+                self.metric[key].append(value)
+            else:
+                self.metric[key] = [value]
 
 
 def test_agent(agent, env, weights='agent_weights.h5f', actions=[]) -> \
-        ActionSequence:
+        PerformanceMetrics:
     """
     Run the agent in an environment and store the actions it takes in a list.
 
@@ -178,7 +161,7 @@ def test_agent(agent, env, weights='agent_weights.h5f', actions=[]) -> \
     Returns:
     * The list containing history of actions.
     """
-    test_perf_log = ActionSequence(actions)
+    test_perf_log = PerformanceMetrics(actions)
     agent.load_weights(weights)
     agent.test(env, nb_episodes=1, visualize=False, verbose=0, callbacks=[test_perf_log])
     return test_perf_log
