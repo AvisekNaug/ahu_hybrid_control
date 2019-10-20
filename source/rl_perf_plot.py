@@ -44,7 +44,7 @@ def rl_reward_plot(datapath, saveplotpath):
     plt.title('Progress of cumulative reward per episode \n over number of episodes')
     # plt.show()
     fig.savefig(saveplotpath + 'Cumulative Reward.pdf',bbox_inches='tight')
-    # plt.close(fig)
+    # plt.close(fig) #remove in jupyter
 
 
 def rl_energy_compare(original_energy_data_path, rl_energy_data_path, saveplotpath, period=1):
