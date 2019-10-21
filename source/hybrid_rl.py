@@ -47,9 +47,12 @@ rl_perf_save(test_perf_log, rllogs)
 
 # plot the results
 # episode wise reward
-rl_reward_plot('../RL_data/Cumulative Episode Rewards.txt', '../RL_data/')
+rl_reward_plot('../RL_data/Cumulative Episode Rewards.txt',
+               '../RL_data/')
 # energy comparison
-rl_energy_compare('../RL_data/totalE_hist.txt', './RL_data/totalE.txt','RL_data/', period=1)
+rl_energy_compare('../RL_data/totalE_hist.txt',
+                  '../RL_data/totalE.txt',
+                  '../RL_data/', period=1)
 # oat vs rht_stp vs pht_stp plot
 oat_vs_set_point_plot('../RL_data/oat.txt',
                       '../RL_data/pht_stp.txt',
