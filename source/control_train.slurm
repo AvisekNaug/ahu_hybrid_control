@@ -13,4 +13,4 @@
 
 source /home/nauga/anaconda3/bin/activate SmartBuildings
 
-python source.hybrid_rl.py
+python hybrid_rl.py
