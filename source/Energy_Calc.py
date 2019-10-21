@@ -1,6 +1,6 @@
 # import modules
 import numpy as np
-from . ThermoProp import *
+from source.ThermoProp import *
 from joblib import load
 
 
@@ -48,15 +48,15 @@ class energy_calc():
 
     def precooltemp(self, ph_temp, airflow, pht_out_rh, pht_out_rh_hist):
 
-        precooltemp = self.precoolmodel(np.array([ph_temp, airflow]))  # F
-        W_in = HumidityRatio(ph_temp, pht_out_rh)  # returns kg-of-moisture/kg-DryAir
+        precooltemp = self.precoolmodel.predict(np.array([ph_temp, airflow]).reshape(1, -1))  # F
+        W_in = HumidityRatio(FtoK(ph_temp), pht_out_rh)  # returns kg-of-moisture/kg-DryAir
         W_out=W_in  # sensible cooling
         pc_out_rh = RelativeHumidty(W_out, FtoK(precooltemp))  # unit less relative humidity
 
         # if we follow current controller settings
         ph_temp_hist = 75  # F
-        precooltemp_hist = self.precoolmodel(np.array([ph_temp_hist, airflow]))  # F
-        W_in_hist = HumidityRatio(ph_temp_hist, pht_out_rh_hist)  # returns kg-of-moisture/kg-DryAir
+        precooltemp_hist = self.precoolmodel.predict(np.array([ph_temp_hist, airflow]).reshape(1, -1))  # F
+        W_in_hist = HumidityRatio(FtoK(ph_temp_hist), pht_out_rh_hist)  # returns kg-of-moisture/kg-DryAir
         W_out_hist = W_in_hist  # sensible cooling
         pc_out_rh_hist = RelativeHumidty(W_out_hist, FtoK(precooltemp_hist))  # unitless relative humidity
 
@@ -73,7 +73,7 @@ class energy_calc():
         H_w = specificEnthalpyWater(Tdb_out_cc)  # Latent heat of cooling
         W_out_cc = HumidityRatio(Tdb_out_cc, 1.0)  # returns Kg-of-moisture/Kg-DryAir RH_out=1.0
         H_out = Enthalpy_Air_H2O(Tdb_out_cc, W_out_cc)
-        cc_energy = m_a*(H_out - H_in) - m_a*(W_in_cc - W_out_cc)*H_w
+        cc_energy = m_a*(H_in - H_out) + m_a*(W_out_cc - W_in_cc)*H_w
         cc_out_rh = 1.0
 
         # if we follow current controller settings
@@ -82,22 +82,22 @@ class energy_calc():
         v = specificVolume(T_db_in_cc, W_in_cc)  # m3/kg
         m_a = cfm2m3(airflow) / v  # kg/s
         H_in = Enthalpy_Air_H2O(T_db_in_cc, W_in_cc)
-        cc_energy_hist = m_a * (H_out - H_in) - m_a * (W_in_cc - W_out_cc) * H_w
+        cc_energy_hist = m_a * (H_in - H_out) + m_a * (W_out_cc - W_in_cc) * H_w
         cc_out_rh_hist = 1.0
 
         return cc_energy, cc_out_rh, cc_energy_hist, cc_out_rh_hist
 
     def recovheattemp(self, oat, ph_temp, cc_t, airflow, cc_out_rh, cc_out_rh_hist):
 
-        recovtemp = self.recovheatmodel(np.array([oat, ph_temp, cc_t, airflow]))
-        W_in = HumidityRatio(cc_t, cc_out_rh)  # returns kg-of-moisture/kg-DryAir
+        recovtemp = self.recovheatmodel.predict(np.array([oat, ph_temp, cc_t, airflow]).reshape(1, -1))
+        W_in = HumidityRatio(FtoK(cc_t), cc_out_rh)  # returns kg-of-moisture/kg-DryAir
         W_out = W_in  # sensible heating
         recov_out_rh = RelativeHumidty(W_out, FtoK(recovtemp))  # unit less relative humidity
 
         # if we follow current controller settings
         ph_temp_hist = FtoK(75)  # K
-        recovtemp_hist = self.recovheatmodel(np.array([oat, ph_temp_hist, cc_t, airflow]))
-        W_in = HumidityRatio(cc_t, cc_out_rh_hist)  # returns kg-of-moisture/kg-DryAir
+        recovtemp_hist = self.recovheatmodel.predict(np.array([oat, ph_temp_hist, cc_t, airflow]).reshape(1, -1))
+        W_in = HumidityRatio(FtoK(cc_t), cc_out_rh_hist)  # returns kg-of-moisture/kg-DryAir
         W_out = W_in  # sensible heating
         recov_out_rh_hist = RelativeHumidty(W_out, FtoK(recovtemp_hist))  # unit less relative humidity
 

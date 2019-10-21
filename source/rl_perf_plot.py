@@ -1,13 +1,17 @@
 from matplotlib import pyplot as plt
 import matplotlib
 matplotlib.use('pdf')
-import re
-import glob
+
+def rl_reward_save(train_metrics, rllogs):
+    f = open(rllogs + '/Cumulative Episode Rewards.txt', 'w')
+    for item in train_metrics.rewardsTrace:
+        f.write("{}\n".format(item))
+    f.close()
 
 
-def rl_perf_save(test_perf_log, rllogs='RLdata'):
+def rl_perf_save(test_perf_log, rllogs='../RLdata'):
 
-    # assert that perf metric has data from at least one episod
+    # assert that perf metric has data from at least one episode
     assert len(test_perf_log.metrics) != 0, 'Need metric data for at least one episode'
 
     # performance metrics in a list where each element has
@@ -16,9 +20,10 @@ def rl_perf_save(test_perf_log, rllogs='RLdata'):
 
     # iterating through the list to save the data
     for episode_dict in perf_metric_list:
-        for key, value in episode_dict:
+        for key, value in episode_dict.items():
             f = open(rllogs + '/' + key + '.txt', 'a+')
             f.writelines("%s\n" % j for j in value)
+            f.close()
 
 
 def rl_reward_plot(datapath, saveplotpath):
@@ -86,7 +91,7 @@ def rl_energy_compare(original_energy_data_path, rl_energy_data_path, saveplotpa
     # plt.close(fig)
 
 
-def oatvsdatplot(oat_data_path, pht_data_path, sat_data_path, saveplotpath, period=1):
+def oat_vs_set_point_plot(oat_data_path, pht_data_path, sat_data_path, saveplotpath, period=1):
 
     # open file and read the content in a list
     with open(oat_data_path, 'r') as f:
@@ -110,7 +115,7 @@ def oatvsdatplot(oat_data_path, pht_data_path, sat_data_path, saveplotpath, peri
     fig, ax = plt.subplots()
     # fig.subplots_adjust(left=.15, bottom=.16, right=.99, top=.97)
     ax.plot(sat, 'g--', label='Controller Discharge Air Temperature')
-    ax.plot(pht, 'k--', label='Controller Preheat Air Temperature')
+    ax.plot(pht, 'k+-', label='Controller Preheat Air Temperature')
     ax.set_ylabel('Temperature in F', fontsize=12)
     ax.legend(loc='upper left', bbox_to_anchor=(0, -0.15))
     ax.set_xlabel('Time points at {} mins'.format(period * 5), fontsize=12)

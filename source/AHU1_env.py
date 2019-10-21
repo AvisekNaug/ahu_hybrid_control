@@ -9,18 +9,18 @@ from gym import spaces
 from gym.utils import seeding
 
 # Importing my own packages which may contain some bugs
-from .Energy_Calc import *
+from source.Energy_Calc import *
 
 
 # This class describes the formal environment which the reinforcement learning
 # interacts with. It inherits some properties from the gym imported earlier
 class Env(gym.Env):
 
-    def __int__(self, datapath, modelpath: list, period=1):
+    def __init__(self, datapath, modelpath, period=1):
 
         # State Space variables
-        self.vars = ['OAT', 'RH', 'AirFlow', 'PH_T', 'SAT', 'CC_T']
-        self.states = ['OAT', 'RH', 'AirFlow', 'PH_T', 'SAT']
+        self.vars = ['OATahu1', 'RHahu1', 'AirFlowahu1', 'PH_Tahu1', 'SATahu1', 'CC_Tahu1']
+        self.states = ['OATahu1', 'RHahu1', 'AirFlowahu1', 'PH_Tahu1', 'SATahu1']
         # parameters
         self.period = period
         self.numactions = 2
@@ -44,13 +44,8 @@ class Env(gym.Env):
 
         # getting 0:mean 1:std 2:min 3:max- maintain a dataframe as much
         # as possible
-        self.Stats = self.traindataset.describe().iloc[[1, 2, 3, 7], self.states]
-
-        # Windowed Stats: Assuming a window of 24 hours
-        # self.win_len = int(1440 / (5 * self.period))
-        # self.windowMean = self.traindataset.rolling(self.win_len, min_periods=1).mean()['OAT']
-        # self.windowMax = self.traindataset.rolling(self.win_len, min_periods=1).max()['OAT']
-        # self.windowMin = self.traindataset.rolling(self.win_len, min_periods=1).min()['OAT']
+        self.Stats = self.traindataset.describe().iloc[[1, 2, 3, 7], :]
+        self.Stats = self.Stats.loc[:, self.states]
 
         # Standard requirements for interfacing with Keras-RL's code
         SpaceLB = [self.Stats.iloc[2, i] for i in range(self.n)]
@@ -70,7 +65,7 @@ class Env(gym.Env):
         self.steps_beyond_done = None
 
         # counter: counts the current step number in an episode
-        # episodelength: dictates number of steps in an episode
+        # episode length: dictates number of steps in an episode
         # testing: whether we env is in testing phase or not
         # dataPtr: steps through the entire available data in a cycle- gets
         #           reset to 0 when entire trainData is used up
@@ -79,11 +74,15 @@ class Env(gym.Env):
         self.dataPtr = 0
         # setting episode length to 1 week since test duration is 1 week. Then we can have 4 episodes for training
         # 1 week = 10080 mins
-        self.episodelength = int(10080 / (period * 5))  # eg 336 steps when period = 6 ie 30 mins interval
+        self.episodelength = int(1040 / (period * 5))  # eg 336 steps when period = 6 ie 30 mins interval
 
         '''Resetting the environment to its initial value'''
         self.S = self.traindataset.iloc[[self.dataPtr]]
         self.state = self.S[self.states]
+
+        # previous action values to make small changes
+        self.prev_pht = self.state['PH_Tahu1'].iloc[0]
+        self.prev_rht = self.state['SATahu1'].iloc[0]
 
     def testenv(self):
         self.testing = True
@@ -100,13 +99,13 @@ class Env(gym.Env):
         # reheat set point
         rht_stp = controlact[1]
         # outside air temperature
-        oat = self.state['OAT']
+        oat = self.state['OATahu1'].iloc[0]
         # airflow rate
-        airflow = self.state['AirFlow']
+        airflow = self.state['AirFlowahu1'].iloc[0]
         # cooling coil exit temperature
-        cc_t = self.state['CC_T']
+        cc_t = self.S['CC_Tahu1'].iloc[0]
         # outside relative humidity
-        orh = self.state['RH']/100
+        orh = self.state['RHahu1'].iloc[0]/100
         # ph_temp = None
 
         # Calculate the preheat energy consumption assuming
@@ -162,10 +161,16 @@ class Env(gym.Env):
             rht_energy, rht_out_rh, sat, rht_energy_hist, rht_out_rh_hist, sat_hist = \
                 self.energyCalc.reheatenergy(airflow, recovtemp, recov_out_rh,
                                              recovtemp_hist, recov_out_rh_hist,
-                                             rht_stp, self.S['SAT'])
+                                             rht_stp, self.S['SATahu1'].iloc[0])
+
+        penalty = max(np.abs(self.prev_pht - ph_temp)-2, 0) + max(np.abs(self.prev_rht - sat)-2, 0)
 
         # calculate reward:
-        reward = -pht_energy -cooling_energy -rht_energy
+        reward = -pht_energy -cooling_energy -rht_energy -penalty
+
+        # previous action values to make small changes
+        self.prev_pht = ph_temp
+        self.prev_rht = sat
 
         # move ahead in time
         self.dataPtr += 1
@@ -184,38 +189,39 @@ class Env(gym.Env):
             done = True
 
         # step to the next state
-        self.S = self.traindataset.iloc[self.dataPtr, :-1]
+        self.S = self.traindataset.iloc[[self.dataPtr]]
         self.state = self.S[self.states]
 
         # change states based on actions
-        self.state['PHT'] = ph_temp
-        self.state['SAT'] = sat
+        self.state['PH_Tahu1'].iloc[0] = ph_temp
+        self.state['SATahu1'].iloc[0] = sat
 
         if self.testing:
             accumulated_info = {
-                'pht_stp': ph_temp,
-                'pht_stp_hist': 73,
-                'rht_stp': sat,
-                'rht_stp_hist': sat_hist,
-                'rht_out_rh': rht_out_rh,
-                'rht_out_rh_hist': rht_out_rh_hist,
-                'pht_energy': pht_energy,
-                'pht_energy_hits': pht_energy_hist,
-                'cooling_energy': cooling_energy,
-                'cooling_energy_hist': cooling_energy_hist,
-                'rht_energy': rht_energy,
-                'rht_energy_hist': rht_energy_hist,
-                'totalE': pht_energy+cooling_energy+rht_energy,
-                'totalE_hist': pht_energy_hist + cooling_energy_hist + rht_energy_hist
+                'oat': float(oat),
+                'pht_stp': float(ph_temp),
+                'pht_stp_hist': float(73),
+                'rht_stp': float(sat),
+                'rht_stp_hist': float(sat_hist),
+                'rht_out_rh': float(rht_out_rh),
+                'rht_out_rh_hist': float(rht_out_rh_hist),
+                'pht_energy': float(pht_energy),
+                'pht_energy_hits': float(pht_energy_hist),
+                'cooling_energy': float(cooling_energy),
+                'cooling_energy_hist': float(cooling_energy_hist),
+                'rht_energy': float(rht_energy),
+                'rht_energy_hist': float(rht_energy_hist),
+                'totalE': float(pht_energy+cooling_energy+rht_energy),
+                'totalE_hist': float(pht_energy_hist + cooling_energy_hist + rht_energy_hist)
             }
         else:
             accumulated_info = {}
 
-        return self.state, reward, done, accumulated_info
+        return self.state.to_numpy().flatten(), reward[0], done, accumulated_info
 
     def reset(self):
-        self.S = self.traindataset.iloc[self.dataPtr, :-1]
+        self.S = self.traindataset.iloc[[self.dataPtr]]
         self.state = self.S[self.states]
         self.counter = 0
         self.steps_beyond_done = None
-        return self.state
+        return self.state.to_numpy().flatten()

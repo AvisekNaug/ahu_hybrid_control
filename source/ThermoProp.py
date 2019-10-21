@@ -81,21 +81,26 @@ def Enthalpy_Air_H2O(Tdb, W):#Enthalpy of dry air
             W = Humidity Ratio [kg/kg dry air]
         Calculations from 2005 ASHRAE Handbook - Fundamentals - SI P6.9 eqn 32
     '''
+    # C:\Users\nauga\Google Drive\BuildingProject\LiteratureReview\ModelEquations
     Tdb  = Tdb - 273.15
     result = 1.006*Tdb + W*(2501 + 1.86*Tdb)
     return result
 
 #h_w
-def specificEnthalpyWater(T):#returns kJ/Kg of condensed water at T K 
-    return PropsSI('H', 'T', T, 'Q', 0, 'Water')/1000 # gives specific centhalpy of water which condensed at TK
+def specificEnthalpyWater(T):  # returns kJ/Kg of condensed water at T K
+    return PropsSI('H', 'T', T, 'Q', 0, 'Water')/1000  # gives specific centhalpy of water which condensed at TK
 
 #W
-def HumidityRatio(Tdb,R,P=101325):# returns Kg-of-moisture/Kg-DryAir at sea level eg HumidityRatio(293.15,0.6)
-    return HAPropsSI('W','T',Tdb,'R',R ,'P',P)#Kg moisture/Kg Dry Air
+def HumidityRatio(Tdb,R,P=101325):  # returns Kg-of-moisture/Kg-DryAir at sea level eg HumidityRatio(293.15,0.6)
+    return HAPropsSI('W','T',Tdb,'R',R ,'P',P)  # Kg moisture/Kg Dry Air
 
 #R
-def RelativeHumidty(W,Tdb,P=101325):#returns relative humidity of air for W:kg/kg humidity ratio and T in Kelvin
-    return HAPropsSI('R','W',W,'T',Tdb,'P',P)#unitless
+def RelativeHumidty(W,Tdb,P=101325):  # returns relative humidity of air for W:kg/kg humidity ratio and T in Kelvin
+    try:
+        result = HAPropsSI('R','W',W,'T',Tdb,'P',P)  # unitless
+    except ValueError:
+        result = 1.0
+    return result
 
 #v_1/v
 def specificVolume(Tdb,W,P=101.325):#Tdb:K; W=kg/kg; P=kPa

@@ -27,6 +27,7 @@ def get_agent(env) -> DDPGAgent:
     Returns:
     * a `DDPGAgent` instance.
     """
+    assert len(env.action_space.shape) == 1
     nb_actions = env.action_space.shape[0]
     action_input = Input(shape=(nb_actions,), name='action_input')
     observation_input = Input(shape=(1,) + env.observation_space.shape, name='observation_input')
@@ -43,12 +44,12 @@ def get_agent(env) -> DDPGAgent:
     y = Dense(16)(y)
     y = BatchNormalization()(y)
     y = Activation('relu')(y)
-    pht = Dense(16)(y)
+    pht = Dense(1)(y)
     pht = BatchNormalization()(pht)
     pht = Activation('tanh')(pht)
     pht = Lambda(lambda a: (a + K.constant(constantBias)) * K.constant(range_action_input[0])
                            + K.constant(lowb[0]))(pht)
-    rht = Dense(16)(y)
+    rht = Dense(1)(y)
     rht = BatchNormalization()(rht)
     rht = Activation('tanh')(rht)
     rht = Lambda(lambda a: (a + K.constant(constantBias)) * K.constant(range_action_input[1])
@@ -71,7 +72,7 @@ def get_agent(env) -> DDPGAgent:
     x = Activation('linear')(x)
     critic = Model(inputs=[action_input, observation_input], outputs=x)
 
-    memory = SequentialMemory(limit=100000, window_length=1)
+    memory = SequentialMemory(limit=1000, window_length=1)
 
     random_process = OrnsteinUhlenbeckProcess(theta=.15, mu=0., sigma=.5, size=nb_actions)
     agent = DDPGAgent(nb_actions=nb_actions, actor=actor, critic=critic, critic_action_input=action_input,
@@ -93,7 +94,7 @@ class SaveBest(Callback):
     def __init__(self, dest: str):
         super().__init__()
         self.dest = dest
-        self.lastreward = -100000
+        self.lastreward = -1000000
         self.rewardsTrace = []
 
     def on_episode_end(self, episode, logs={}):
@@ -141,7 +142,7 @@ class PerformanceMetrics(Callback):
         self.metrics.append(self.metric)
 
     def on_step_end(self, step, logs={}):
-        for key, value in logs.get('info'):
+        for key, value in logs.get('info').items():
             if key in self.metric:
                 self.metric[key].append(value)
             else:
