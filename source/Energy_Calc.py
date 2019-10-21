@@ -1,6 +1,6 @@
 # import modules
 import numpy as np
-from source.ThermoProp import *
+from ThermoProp import *
 from joblib import load
 
 
