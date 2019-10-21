@@ -11,9 +11,9 @@ warnings.filterwarnings("ignore", category=SettingWithCopyWarning)
 
 # parameters for the problem
 period = 1  # ie period*5 minutes eg 12*5 60 minutes
-datapath = '/hybrid_data_ahu1.pkl'
-modelpath = ['/ResultsAHU1/PreCool_Temp_GBR_model_2000_estimators.joblib',
-             '/ResultsAHU1/Recovery_Heat Temp_GBR_model_2000_estimators.joblib']
+datapath = './hybrid_data_ahu1.pkl'
+modelpath = ['./ResultsAHU1/PreCool_Temp_GBR_model_2000_estimators.joblib',
+             './ResultsAHU1/Recovery_Heat Temp_GBR_model_2000_estimators.joblib']
 time_steps = 1  # int(120/(period*5))
 num_steps = 210  # rl train steps 1680 67200 117600 33600 100800
 
