@@ -1,8 +1,8 @@
 from pandas.core.common import SettingWithCopyWarning
 
-from source.AHU1_env import *
-from source.agent import *
-from source.rl_perf_plot import *
+from .AHU1_env import *
+from .agent import *
+from .rl_perf_plot import *
 # from source.dataGenerator import *
 # from source.helperfunctions import *
 import os

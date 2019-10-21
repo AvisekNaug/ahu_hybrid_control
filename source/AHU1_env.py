@@ -9,7 +9,7 @@ from gym import spaces
 from gym.utils import seeding
 
 # Importing my own packages which may contain some bugs
-from source.Energy_Calc import *
+from .Energy_Calc import *
 
 
 # This class describes the formal environment which the reinforcement learning
