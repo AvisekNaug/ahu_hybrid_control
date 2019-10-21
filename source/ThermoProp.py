@@ -1,6 +1,6 @@
 import math
 # Predicting the thermodynamic properties
-from CoolProp.CoolProp import PropsSI,Props
+from CoolProp.CoolProp import PropsSI, Props
 from CoolProp.HumidAirProp import HAPropsSI
 
 def Part_press(P,W):
