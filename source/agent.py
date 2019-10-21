@@ -121,7 +121,7 @@ def train_agent(agent, env, steps=30000, dest='agent_weights.h5f'):
     * `store_weights`: Containing th reward trace
     """
     train_metrics = SaveBest(dest=dest)
-    agent.fit(env, nb_steps=steps, visualize=False, verbose=0, callbacks=[train_metrics])
+    agent.fit(env, nb_steps=steps, visualize=False, verbose=1, callbacks=[train_metrics])
     return train_metrics
 
 

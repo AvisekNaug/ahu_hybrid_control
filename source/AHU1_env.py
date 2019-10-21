@@ -74,7 +74,7 @@ class Env(gym.Env):
         self.dataPtr = 0
         # setting episode length to 1 week since test duration is 1 week. Then we can have 4 episodes for training
         # 1 week = 10080 mins
-        self.episodelength = int(500 / (period * 5))  # eg 336 steps when period = 6 ie 30 mins interval
+        self.episodelength = int(10080 / (period * 5))  # eg 336 steps when period = 6 ie 30 mins interval
 
         '''Resetting the environment to its initial value'''
         self.S = self.traindataset.iloc[[self.dataPtr]]
