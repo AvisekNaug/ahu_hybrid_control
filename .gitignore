@@ -5,6 +5,7 @@ data/
 .idea/
 ResultsAHU1/
 ResultsAHU2/
+RL_data/
 
 #extensions
 *.code-workspace
