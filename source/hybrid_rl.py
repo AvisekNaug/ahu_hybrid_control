@@ -18,7 +18,7 @@ time_steps = 1  # int(120/(period*5))
 num_steps = 110  # rl train steps 1680 67200 117600 33600 100800
 
 # Remove RL training log file infos
-rllogs = '/RL_data'
+rllogs = '../RL_data'
 try:
     os.mkdir(rllogs)
 except FileExistsError:
