@@ -166,7 +166,7 @@ class Env(gym.Env):
         penalty = max(np.abs(self.prev_pht - ph_temp)-2, 0) + max(np.abs(self.prev_rht - sat)-2, 0)
 
         # calculate reward:
-        reward = -pht_energy -cooling_energy -rht_energy -penalty
+        reward = -float(pht_energy) -float(cooling_energy) -float(rht_energy) -float(penalty)
 
         # previous action values to make small changes
         self.prev_pht = ph_temp
@@ -217,7 +217,7 @@ class Env(gym.Env):
         else:
             accumulated_info = {}
 
-        return self.state.to_numpy().flatten(), reward[0], done, accumulated_info
+        return self.state.to_numpy().flatten(), reward, done, accumulated_info
 
     def reset(self):
         self.S = self.traindataset.iloc[[self.dataPtr]]
