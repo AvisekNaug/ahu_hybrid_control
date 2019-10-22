@@ -36,7 +36,7 @@ agent = get_agent(env)
 train_metrics = train_agent(agent, env, steps=num_steps, dest=rllogs + '/' + 'agent_weights.h5f')
 
 # save training metrics
-rl_reward_save(train_metrics, rllogs)
+rl_reward_save(train_metrics, rllogs= rllogs)
 
 # do testing
 env.testenv()
