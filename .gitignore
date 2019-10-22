@@ -12,3 +12,6 @@ source/__pyc
 *.code-workspace
 *.joblib
 *.pyc
+hybrid_rl_local.py
+Energy_Calc_local.py
+ThermoProp_local
