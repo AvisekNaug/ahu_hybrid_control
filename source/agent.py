@@ -164,5 +164,5 @@ def test_agent(agent, env, weights='agent_weights.h5f', actions=[]) -> \
     """
     test_perf_log = PerformanceMetrics(actions)
     agent.load_weights(weights)
-    agent.test(env, nb_episodes=1, visualize=False, verbose=0, callbacks=[test_perf_log])
+    agent.test(env, nb_episodes=1, visualize=False, verbose=2, callbacks=[test_perf_log])
     return test_perf_log
