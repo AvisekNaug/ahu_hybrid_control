@@ -7,6 +7,7 @@ ResultsAHU1/
 ResultsAHU2/
 RL_data/
 source/__pyc
+RL_data_local/
 
 #extensions
 *.code-workspace
