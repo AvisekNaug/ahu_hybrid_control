@@ -9,7 +9,7 @@ def rl_reward_save(train_metrics, rllogs):
     f.close()
 
 
-def rl_perf_save(test_perf_log, rllogs='../RLdata'):
+def rl_perf_save(test_perf_log, logs):
 
     # assert that perf metric has data from at least one episode
     assert len(test_perf_log.metrics) != 0, 'Need metric data for at least one episode'
@@ -21,7 +21,7 @@ def rl_perf_save(test_perf_log, rllogs='../RLdata'):
     # iterating through the list to save the data
     for episode_dict in perf_metric_list:
         for key, value in episode_dict.items():
-            f = open(rllogs + '/' + key + '.txt', 'a+')
+            f = open(logs + '/' + key + '.txt', 'a+')
             f.writelines("%s\n" % j for j in value)
             f.close()
 
@@ -127,5 +127,71 @@ def oat_vs_set_point_plot(oat_data_path, pht_data_path, sat_data_path, saveplotp
     plt.title('Comparison of Outside air temperature, \n controller preheat air temperature'
               ' \n and controller discharge air temperature')
     # plt.show()
-    fig.savefig(saveplotpath + 'OATvsSATvsPHT' + '.pdf',bbox_inches='tight')
+    fig.savefig(saveplotpath + 'OATvsSATvsPHT' + '.pdf', bbox_inches='tight')
+    plt.close(fig)
+
+def oat_vs_rht_plot(oat_data_path, sat_data_path, saveplotpath, period=1):
+
+    # open file and read the content in a list
+    with open(oat_data_path, 'r') as f:
+        oat = [float(i.rstrip()) for i in f.readlines()]
+    # open file and read the content in a list
+    with open(sat_data_path, 'r') as f:
+        sat = [float(i.rstrip()) for i in f.readlines()]
+
+    plt.rc('xtick', labelsize=8)
+    plt.rc('ytick', labelsize=8)
+    plt.rc('axes', labelsize=8)
+
+    # width as measured in inkscape
+    width = 10.487
+    height = width / 1.618
+    plt.rcParams["figure.figsize"] = (width, height)
+
+    fig, ax = plt.subplots()
+    # fig.subplots_adjust(left=.15, bottom=.16, right=.99, top=.97)
+    ax.plot(sat, 'g--', label='Controller Discharge Air Temperature')
+    ax.set_ylabel('Reheat Discharge Temperature in F', fontsize=12)
+    ax.legend(loc='upper left', bbox_to_anchor=(0, -0.15))
+    ax.set_xlabel('Time points at {} mins'.format(period * 5), fontsize=12)
+    ax1 = ax.twinx()
+    ax1.plot(oat, 'r--', label='Outside Air Temperature')
+    ax1.set_ylabel('Outside Air Temperature in F', fontsize=12)
+    ax1.legend(loc='upper left', bbox_to_anchor=(0, -0.35))
+    plt.grid(which='both', linewidth=0.2)
+    plt.title('Comparison of Outside air temperature, \n controller preheat air temperature'
+              ' \n and controller discharge air temperature')
+    # plt.show()
+    fig.savefig(saveplotpath + 'OATvsSAT' + '.pdf', bbox_inches='tight')
+    plt.close(fig)
+
+def relhumplot(rhdatapath, rh_histdatapath, saveplotpath, period=1):
+
+    # open file and read the content in a list
+    with open(rhdatapath, 'r') as f:
+        rh = [float(i.rstrip()) for i in f.readlines()]
+    # open file and read the content in a list
+    with open(rh_histdatapath, 'r') as f:
+        rh_hist = [float(i.rstrip()) for i in f.readlines()]
+
+    plt.rc('xtick', labelsize=8)
+    plt.rc('ytick', labelsize=8)
+    plt.rc('axes', labelsize=8)
+
+    # width as measured in inkscape
+    width = 10.487
+    height = width / 1.618
+    plt.rcParams["figure.figsize"] = (width, height)
+
+    # create the plot
+    fig, ax = plt.subplots()
+    ax.plot(rh_hist, 'r--', label='historical setpoint based relative humidity')
+    ax.plot(rh, 'g--', label='controller setpoint based relative humidity')
+    ax.set_title('Comparison of historical and controller \n setpoint based relative humidity')
+    ax.set_xlabel('Time points at {} mins'.format(period * 5))
+    ax.set_ylabel('Relative Humidity')
+    ax.grid(which='both', linewidth=0.2)
+    ax.legend(loc='upper left', bbox_to_anchor=(0, -0.15))
+    # plt.show()
+    fig.savefig(saveplotpath + 'Relative Humidity Comparison.pdf', bbox_inches='tight')
     plt.close(fig)
