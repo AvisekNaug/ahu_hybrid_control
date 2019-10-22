@@ -6,8 +6,9 @@ data/
 ResultsAHU1/
 ResultsAHU2/
 RL_data/
+source/__pyc
 
 #extensions
 *.code-workspace
 *.joblib
-.*pyc
+*.pyc
