@@ -57,7 +57,7 @@ class Env(gym.Env):
         #                                high=self.Stats.iloc[3, [-3, -2]].to_numpy(),
         #                                dtype=np.float32)
         self.action_space = spaces.Box(low=np.array([65, 55]),
-                                       high=np.array([75, 75]),
+                                       high=np.array([70, 70]),
                                        dtype=np.float32)
         self.seed()
         self.viewer = None
@@ -163,10 +163,16 @@ class Env(gym.Env):
                                              recovtemp_hist, recov_out_rh_hist,
                                              rht_stp, self.S['SATahu1'].iloc[0])
 
-        penalty = max(np.abs(self.prev_pht - ph_temp)-2, 0) + max(np.abs(self.prev_rht - sat)-2, 0)
+        # penalty = max(np.abs(self.prev_pht - ph_temp)-2, 0) + max(np.abs(self.prev_rht - sat)-2, 0)
 
         # calculate reward:
-        reward = -float(pht_energy) -float(cooling_energy) -float(rht_energy) -float(penalty)
+        t1 = 1 if pht_energy_hist-pht_energy > 0 else 0
+        t2 = 1 if cooling_energy_hist-cooling_energy > 0 else 0
+        t3 = 1 if rht_energy_hist-rht_energy > 0 else 0
+        t4 = 1 if np.abs(self.prev_pht - ph_temp)< 2 else -0.2
+        t5 = 1 if np.abs(self.prev_rht - sat)<2 else -0.2
+        reward = t1+t2+t3+t4+t5
+        # reward = -float(pht_energy) -float(cooling_energy) -float(rht_energy) -float(penalty)
 
         # previous action values to make small changes
         self.prev_pht = ph_temp
