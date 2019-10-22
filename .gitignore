@@ -14,4 +14,4 @@ source/__pyc
 *.pyc
 hybrid_rl_local.py
 Energy_Calc_local.py
-ThermoProp_local
+ThermoProp_local.py
