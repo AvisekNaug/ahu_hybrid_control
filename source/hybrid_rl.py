@@ -1,5 +1,4 @@
 from pandas.core.common import SettingWithCopyWarning
-
 from AHU1_env import *
 from agent import *
 from rl_perf_plot import *
@@ -15,7 +14,7 @@ datapath = '../hybrid_data_ahu1.pkl'
 modelpath = ['../ResultsAHU1/PreCool_Temp_GBR_model_2000_estimators.joblib',
              '../ResultsAHU1/Recovery_Heat Temp_GBR_model_2000_estimators.joblib']
 time_steps = 1  # int(120/(period*5))
-num_steps = 201600  # rl train steps 1680 67200 117600 33600 100800
+num_steps = 806400  # rl train steps 1680 67200 117600 33600 100800
 
 # Remove RL training log file infos
 rllogs = '../RL_data'
@@ -50,12 +49,18 @@ rl_perf_save(test_perf_log, rllogs)
 rl_reward_plot('../RL_data/Cumulative Episode Rewards.txt',
                '../RL_data/')
 # energy comparison
-rl_energy_compare('../RL_data/totalE_hist.txt',
-                  '../RL_data/totalE.txt',
-                  '../RL_data/', period=1)
-# oat vs rht_stp vs pht_stp plot
-oat_vs_set_point_plot('../RL_data/oat.txt',
-                      '../RL_data/pht_stp.txt',
-                      '../RL_data/rht_stp.txt',
-                      '../RL_data/', period=1)
+rl_energy_compare('../RL_data_local/totalE_hist.txt',
+                  '../RL_data_local/oat.txt',
+                  '../RL_data_local/totalE.txt',
+                  '../RL_data_local/', period=1)
 
+# relative humidity comparison
+relhumplot('../RL_data_local/rht_out_rh.txt',
+           '../RL_data_local/oat.txt',
+           '../RL_data_local/rht_out_rh_hist.txt',
+           '../RL_data_local/', period=1)
+
+# combined plot
+oat_vs_control('../RL_data_local/splot.txt',
+               '../RL_data_local/oat.txt',
+               '../RL_data_local/', period=1)
