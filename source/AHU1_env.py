@@ -136,6 +136,10 @@ class Env(gym.Env):
             rht_energy, rht_out_rh, sat, rht_energy_hist, rht_out_rh_hist, sat_hist = \
                 0, recov_out_rh, recovtemp, \
                 0, recov_out_rh_hist, recovtemp_hist
+
+            # for plotting
+            splot = ph_temp
+
         else:
             # resultant preheat output temperature
             ph_temp = oat
@@ -162,6 +166,9 @@ class Env(gym.Env):
                 self.energyCalc.reheatenergy(airflow, recovtemp, recov_out_rh,
                                              recovtemp_hist, recov_out_rh_hist,
                                              rht_stp, self.S['SATahu1'].iloc[0])
+
+            # for plotting
+            splot = sat
 
         # penalty = max(np.abs(self.prev_pht - ph_temp)-2, 0) + max(np.abs(self.prev_rht - sat)-2, 0)
 
@@ -204,6 +211,7 @@ class Env(gym.Env):
 
         if self.testing:
             accumulated_info = {
+                'splot': float(splot),
                 'oat': float(oat),
                 'pht_stp': float(ph_temp),
                 'pht_stp_hist': float(73),
