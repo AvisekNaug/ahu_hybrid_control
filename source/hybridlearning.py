@@ -48,41 +48,41 @@ metasysdataahu1 = [False, False, True]
 metasysdataahu2 = [False, False, False]
 
 # create custom dataframes
-customdf_ahu('./data/ahu1', ahu1, 'hybrid_data_ahu1.pkl', metasysdataahu1, limit=0.1)
-customdf_ahu('./data/ahu2', ahu2, 'hybrid_data_ahu2.pkl', metasysdataahu2, limit=0.5)
+customdf_ahu('../data/ahu1', ahu1, '../traindata/hybrid_data_ahu1.pkl', metasysdataahu1, limit=0.1)
+customdf_ahu('../data/ahu2', ahu2, '../traindata/hybrid_data_ahu2.pkl', metasysdataahu2, limit=0.5)
 
 # read the dataframe from stored pickled data
 df1 = read_pickle('hybrid_data_ahu1.pkl')
 df2 = read_pickle('hybrid_data_ahu2.pkl')
 
 # remove old results files
-removeoldresults('ResultsAHU1')
-removeoldresults('ResultsAHU2')
+removeoldresults('../ResultsAHU1')
+removeoldresults('../ResultsAHU2')
 
 # learn function for estimating recovery heat air temperature for AHU 1
 X_train, X_test, y_train, y_test = recovheatdata(df1, ahu1)
-model = GBR_model(modeltype='Recovery Heat Temp', period=1, savepath='ResultsAHU1')
+model = GBR_model(modeltype='Recovery Heat Temp', period=1, savepath='../ResultsAHU1')
 model.trainmodel(X_train, X_test, y_train, y_test, savemodel=True)
 
 # learn function for estimating pre cool air temperature for AHU 1
 X_train, X_test, y_train, y_test = precooldata(df1, ahu1)
-model = GBR_model(modeltype='PreCool Temp', period=1, savepath='ResultsAHU1')
+model = GBR_model(modeltype='PreCool Temp', period=1, savepath='../ResultsAHU1')
 model.trainmodel(X_train, X_test, y_train, y_test, savemodel=True)
 
 # learn function for estimating recovery heat air temperature for AHU 2
 X_train, X_test, y_train, y_test = recovheatdata(df2, ahu2)
-model = GBR_model(modeltype='Recovery Heat Temp', period=1, savepath='ResultsAHU2')
+model = GBR_model(modeltype='Recovery Heat Temp', period=1, savepath='../ResultsAHU2')
 model.trainmodel(X_train, X_test, y_train, y_test, savemodel=True)
 
 # learn function for estimating pre cool air temperature for AHU 2
 X_train, X_test, y_train, y_test = precooldata(df2, ahu2)
-model = GBR_model(modeltype='PreCool Temp', period=1, savepath='ResultsAHU2')
+model = GBR_model(modeltype='PreCool Temp', period=1, savepath='../ResultsAHU2')
 model.trainmodel(X_train, X_test, y_train, y_test, savemodel=True)
 
 # learn the necessary driven models from the provided data
-def customdf_condensor(savepath='condensordata.pkl', metasysdata=[False], limit=0.1):
+def customdf_condensor(savepath='../traindata/condensordata.pkl', metasysdata=[False], limit=0.1):
     # read the relevant data
-    data_path = ['./data/condensor/']
+    data_path = ['../data/condensor/']
     date_column_name = ['Date']
     date_format = ['%m/%d/%Y %H:%M']
     outlier_names = [['Alumni_Hall_Cond_Loop_S_T.value',
@@ -124,7 +124,7 @@ def customdf_condensor(savepath='condensordata.pkl', metasysdata=[False], limit=
     dfsave(df, savepath)
 # create custom dataframes
 customdf_condensor()
-df3 = read_pickle('condensordata.pkl')
+df3 = read_pickle('../traindata/condensordata.pkl')
 
 # setup environment to learn the appropriate control method
 # this section will be written in a separate script
