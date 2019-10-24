@@ -1,3 +1,3 @@
 ## Implementing the hybrid control
 
-This branchis implemented using Keras RL. Another branch will be using Stable Baselines
+This branch will implement Stable Baselines to study the different RL algorithm on the Hybrid System AHU control
