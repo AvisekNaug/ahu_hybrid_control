@@ -13,3 +13,6 @@ RL_data_local/
 *.code-workspace
 *.joblib
 *.pyc
+AHU1_Analysis.ipynb
+AHU1_Env.ipynb
+LearningDataDrivenModels.ipynb
