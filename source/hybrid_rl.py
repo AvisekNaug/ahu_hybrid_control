@@ -10,7 +10,7 @@ warnings.filterwarnings("ignore", category=SettingWithCopyWarning)
 
 # parameters for the problem
 period = 1  # ie period*5 minutes eg 12*5 60 minutes
-datapath = '../hybrid_data_ahu1.pkl'
+datapath = '../traindata/hybrid_data_ahu1.pkl'
 modelpath = ['../ResultsAHU1/PreCool_Temp_GBR_model_2000_estimators.joblib',
              '../ResultsAHU1/Recovery_Heat Temp_GBR_model_2000_estimators.joblib']
 time_steps = 1  # int(120/(period*5))
