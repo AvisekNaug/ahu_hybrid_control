@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
-matplotlib.use('pdf')
+# matplotlib.use('pdf')
 
 def rl_reward_save(train_metrics, rllogs):
     f = open(rllogs + '/Cumulative Episode Rewards.txt', 'w')
@@ -230,7 +230,7 @@ def oat_vs_control(splotpath, oatpath, saveplotpath, period=1):
     # open file and read the content in a list
     with open(splotpath, 'r') as f:
         splot = [float(i.rstrip()) for i in f.readlines()]
-    splot = running_mean(splot, N=120)
+    splot = running_mean(splot)
     # open file and read the content in a list
     with open(oatpath, 'r') as f:
         oat = [float(i.rstrip()) for i in f.readlines()]
@@ -279,7 +279,7 @@ def running_mean(l, N=25):
     sum = 0
     result = list(0 for x in l)
 
-    for i in range( 0, N ):
+    for i in range(0, N):
         sum = sum + l[i]
         result[i] = sum / (i+1)
 
@@ -288,3 +288,33 @@ def running_mean(l, N=25):
         result[i] = sum / N
 
     return result
+
+def moving_average(values, window):
+    """
+    Smooth values by doing a moving average
+    :param values: (numpy array)
+    :param window: (int)
+    :return: (numpy array)
+    """
+    weights = np.repeat(1.0, window) / window
+    return np.convolve(values, weights, 'valid')
+
+from stable_baselines.results_plotter import load_results, ts2xy
+def plot_results(log_folder, title='Learning Curve'):
+    """
+    plot the results
+
+    :param log_folder: (str) the save location of the results to plot
+    :param title: (str) the title of the task to plot
+    """
+    x, y = ts2xy(load_results(log_folder), 'episodes')
+    y = moving_average(y, window=1)
+    # Truncate x
+    x = x[len(x) - len(y):]
+
+    fig = plt.figure(title)
+    plt.plot(x, y)
+    plt.xlabel('Number of Episodes')
+    plt.ylabel('Rewards')
+    plt.title(title + " Smoothed")
+    plt.show()

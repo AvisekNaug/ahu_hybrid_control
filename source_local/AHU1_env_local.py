@@ -56,9 +56,12 @@ class Env(gym.Env):
         # self.action_space = spaces.Box(low=self.Stats.iloc[2, [-3, -2]].to_numpy(),
         #                                high=self.Stats.iloc[3, [-3, -2]].to_numpy(),
         #                                dtype=np.float32)
-        self.action_space = spaces.Box(low=np.array([65, 55]),
-                                       high=np.array([75, 75]),
+        self.action_space = spaces.Box(low=np.array([-1, -1]),
+                                       high=np.array([1, 1]),
                                        dtype=np.float32)
+        self.actionrange = np.array([75-65, 75-62])
+        self.actionmin = np.array([65, 62])
+
         self.seed()
         self.viewer = None
         self.state = None
@@ -92,8 +95,14 @@ class Env(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
+    def boundmapping(self,controlact):
+
+        controlact = (controlact-np.array([-1, -1]))*0.5*self.actionrange + self.actionmin
+        return controlact
+
     def step(self, controlact):  # have to see model summary to figure out shape of controlAct
 
+        controlact = self.boundmapping(controlact)
         # preheat set point
         pht_stp = controlact[0]
         # reheat set point
