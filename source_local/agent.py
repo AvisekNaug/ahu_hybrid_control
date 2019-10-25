@@ -37,7 +37,7 @@ def get_agent(env, rllogs):
     action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
 
     # create a TD3 agent with the above parameters
-    agent = TD3(MlpPolicy, env, action_noise=action_noise, verbose=1)
+    agent = TD3(MlpPolicy, env, action_noise=action_noise, verbose=1, tensorboard_log="../td3_hvac_tensorboard/")
 
     return agent
 
@@ -60,7 +60,7 @@ def train_agent(agent, rllogs, env=None, steps=30000):
         # set this as the environment
         agent.set_env(env)
 
-    agent.learn(total_timesteps=steps, callback=SaveBest)
+    agent.learn(total_timesteps=steps, callback=SaveBest, tb_log_name="results_run")
 
 
 def test_agent(agent, env, rllogs_local, episodes = 1):
@@ -79,7 +79,7 @@ def test_agent(agent, env, rllogs_local, episodes = 1):
     # env.set_attr("testing", True)
     env.set_attr("dataPtr", 10000)
 
-    perf_metrics = PerformanceMetrics
+    perf_metrics = performancemetrics()
 
     for _ in range(episodes):
         perf_metrics.on_episode_begin()
@@ -88,11 +88,14 @@ def test_agent(agent, env, rllogs_local, episodes = 1):
         while not dones:
             action, _ = agent.predict(obs)
             obs, rewards, dones, info = env.step(action)
-            perf_metrics.on_step_end(info)
+            perf_metrics.on_step_end(info[0])
         perf_metrics.on_episode_end()
 
     return perf_metrics
 
+best_mean_reward = -np.inf
+n_steps = 0
+rllogs = '../RL_data/'
 
 def SaveBest(_locals, _globals):
     """
@@ -102,6 +105,8 @@ def SaveBest(_locals, _globals):
     Args:
     * `dest`: name of `h5f` file where to store weights.
     """
+
+    global best_mean_reward, n_steps, rllogs
 
     # Print stats every 1000 calls
     if (n_steps + 1) % 1000 == 0:
@@ -123,7 +128,7 @@ def SaveBest(_locals, _globals):
     return True
 
 
-class PerformanceMetrics:
+class performancemetrics():
     """
     Store the history of performance metrics. Useful for evaluating the
     agent's performance:
