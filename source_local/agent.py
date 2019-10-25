@@ -1,88 +1,100 @@
+# import modules
+import numpy as np
+
+from stable_baselines import TD3
+from stable_baselines.td3.policies import MlpPolicy
+from stable_baselines.common.vec_env import DummyVecEnv
+from stable_baselines.ddpg.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
+from stable_baselines.results_plotter import load_results, ts2xy
+from stable_baselines.bench import Monitor
+
 """
 Defines functions that construct various components of a reinforcement learning
 agent
 """
-# from typing import List, Any
-
-from keras import backend as K
-from keras.models import Sequential, Model
-from keras.callbacks import Callback
-from keras.layers import Dense, Activation, Flatten, Input, Concatenate, Multiply, Lambda, BatchNormalization
-from keras.optimizers import Adam
-
-from rl.agents import DDPGAgent
-from rl.memory import SequentialMemory
-from rl.random import OrnsteinUhlenbeckProcess
 
 
-def get_agent(env) -> DDPGAgent:
+def get_agent(env, rllogs):
     """
-    Generate a `DDPGAgent` instance that represents an agent learned using
-    Deep Deterministic Policy Gradient. The agent has 2 neural networks: an actor
-    network and a critic network.
-
-    Args:
-    * `env`: An OpenAI `gym.Env` instance
-
-    Returns:
-    * a `DDPGAgent` instance.
+    Generate a `Twin Delayed DDPGAgent` instance that TD3 is a direct successor of DDPG
+    and improves it using three major tricks: clipped double Q-Learning, delayed policy
+    update and target policy smoothing
     """
-    assert len(env.action_space.shape) == 1
-    nb_actions = env.action_space.shape[0]
-    action_input = Input(shape=(nb_actions,), name='action_input')
-    observation_input = Input(shape=(1,) + env.observation_space.shape, name='observation_input')
 
-    range_action_input = 0.5 * (env.action_space.high - env.action_space.low)
-    constantBias = 1
-    lowb = env.action_space.low
+    # Wrap the environment for monitoring
+    env = Monitor(env, rllogs)
 
-    # actor = Flatten(input_shape=(1,) + env.observation_space.shape)(observation_input)
-    y = Flatten()(observation_input)
-    y = Dense(16)(y)
-    y = BatchNormalization()(y)
-    y = Activation('relu')(y)
-    y = Dense(16)(y)
-    y = BatchNormalization()(y)
-    y = Activation('relu')(y)
-    pht = Dense(1)(y)
-    pht = BatchNormalization()(pht)
-    pht = Activation('tanh')(pht)
-    pht = Lambda(lambda a: (a + K.constant(constantBias)) * K.constant(range_action_input[0])
-                           + K.constant(lowb[0]))(pht)
-    rht = Dense(1)(y)
-    rht = BatchNormalization()(rht)
-    rht = Activation('tanh')(rht)
-    rht = Lambda(lambda a: (a + K.constant(constantBias)) * K.constant(range_action_input[1])
-                           + K.constant(lowb[1]))(rht)
-    axn = Concatenate()([pht, rht])
-    actor = Model(inputs=observation_input, outputs=axn)
+    # TD3 takes the environment in vectorized form
+    env = DummyVecEnv([lambda: env])
 
-    flattened_observation = Flatten()(observation_input)
-    x = Concatenate()([action_input, flattened_observation])
-    x = Dense(32)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(32)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(32)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dense(1)(x)
-    x = Activation('linear')(x)
-    critic = Model(inputs=[action_input, observation_input], outputs=x)
+    # necessary steps to adjust the env for testing
+    env.env_method("testenv")
+    # env.set_attr("testing", True)
+    env.set_attr("dataPtr", 10000)
 
-    memory = SequentialMemory(limit=1000, window_length=1)
+    # The noise objects for TD3
+    n_actions = env.action_space.shape[-1]
+    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
 
-    random_process = OrnsteinUhlenbeckProcess(theta=.15, mu=0., sigma=.5, size=nb_actions)
-    agent = DDPGAgent(nb_actions=nb_actions, actor=actor, critic=critic, critic_action_input=action_input,
-                      memory=memory, nb_steps_warmup_critic=100, nb_steps_warmup_actor=100,
-                      gamma=.99, target_model_update=1e-3, random_process=random_process)
-    agent.compile(Adam(lr=.001, clipnorm=1.), metrics=['mae'])
+    # create a TD3 agent with the above parameters
+    agent = TD3(MlpPolicy, env, action_noise=action_noise, verbose=1)
+
     return agent
 
 
-class SaveBest(Callback):
+def train_agent(agent, rllogs, env=None, steps=30000):
+    """
+    Use a `DDPGAgent` instance to train its policy. The agent stores the best
+    policy it encounters during training for use later. Once trained, thw agent
+    can be used to exploit its experience.
+    """
+
+    # used in case of incremental learning
+    if env is not None:
+        # Wrap the environment for monitoring
+        env = Monitor(env, rllogs)
+
+        # TD3 takes the environment in vectorized form
+        env = DummyVecEnv([lambda: env])
+
+        # set this as the environment
+        agent.set_env(env)
+
+    agent.learn(total_timesteps=steps, callback=SaveBest)
+
+
+def test_agent(agent, env, rllogs_local, episodes = 1):
+    """
+    Run the agent in an environment and store the actions it takes in a list.
+    """
+
+    # Wrap the environment for monitoring
+    env = Monitor(env, rllogs_local)
+
+    # TD3 takes the environment in vectorized form
+    env = DummyVecEnv([lambda: env])
+
+    # necessary steps to adjust the env for testing
+    env.env_method("testenv")
+    # env.set_attr("testing", True)
+    env.set_attr("dataPtr", 10000)
+
+    perf_metrics = PerformanceMetrics
+
+    for _ in range(episodes):
+        perf_metrics.on_episode_begin()
+        obs = env.reset()
+        dones = False
+        while not dones:
+            action, _ = agent.predict(obs)
+            obs, rewards, dones, info = env.step(action)
+            perf_metrics.on_step_end(info)
+        perf_metrics.on_episode_end()
+
+    return perf_metrics
+
+
+def SaveBest(_locals, _globals):
     """
     Store neural network weights during training if the current episode's
     performance is better than the previous best performance.
@@ -91,78 +103,45 @@ class SaveBest(Callback):
     * `dest`: name of `h5f` file where to store weights.
     """
 
-    def __init__(self, dest: str):
-        super().__init__()
-        self.dest = dest
-        self.lastreward = -1000000
-        self.rewardsTrace = []
+    # Print stats every 1000 calls
+    if (n_steps + 1) % 1000 == 0:
+        # Evaluate policy training performance
+        x, y = ts2xy(load_results(rllogs), 'timesteps')
+        if len(x) > 0:
+            mean_reward = np.mean(y[-100:])
+            print(x[-1], 'timesteps')
+            print(
+                "Best mean reward: {:.2f} - Last mean reward per episode: {:.2f}".format(best_mean_reward, mean_reward))
 
-    def on_episode_end(self, episode, logs={}):
-        self.rewardsTrace.append(logs.get('episode_reward'))
-        if logs.get('episode_reward') > self.lastreward:
-            self.lastreward = logs.get('episode_reward')
-            self.model.save_weights(self.dest, overwrite=True)
-
-
-def train_agent(agent, env, steps=30000, dest='agent_weights.h5f'):
-    """
-    Use a `DDPGAgent` instance to train its policy. The agent stores the best
-    policy it encounters during training for use later. Once trained, the agent
-    can be used to exploit its experience.
-
-    Args:
-    * `agent`: A `DDPGAgent` returned by `get_agent()`.
-    * `env`: An OpenAI `gym.Env` environment in which the agent will operate.
-    * `steps`: Number of actions to train over. The larger the number, the more
-    experience the agent uses to learn, and the longer training takes.
-    * `dest`: name of `h5f` file where to store weights.
-
-    Retruns
-    * `store_weights`: Containing th reward trace
-    """
-    train_metrics = SaveBest(dest=dest)
-    agent.fit(env, nb_steps=steps, visualize=False, verbose=1, callbacks=[train_metrics])
-    return train_metrics
+            # New best model, you could save the agent here
+            if mean_reward > best_mean_reward:
+                best_mean_reward = mean_reward
+                # Example for saving best model
+                print("Saving new best model")
+                _locals['self'].save(rllogs + 'best_model.pkl')
+    n_steps += 1
+    return True
 
 
-class PerformanceMetrics(Callback):
+class PerformanceMetrics:
     """
     Store the history of performance metrics. Useful for evaluating the
     agent's performance:
     """
 
     def __init__(self, metrics=[]):
-        self.metrics = [] # store perf metrics for each episode
-        super().__init__()
+        self.metrics = metrics  # store perf metrics for each episode
+        self.metric = {}
 
-    def on_episode_begin(self, episode, logs={}):
-        self.metric = {}  # store performance metrics
+    def on_episode_begin(self, logs={}):
+        self.metric = logs  # store performance metrics
 
-    def on_episode_end(self, episode, logs={}):
+    def on_episode_end(self):
         self.metrics.append(self.metric)
 
-    def on_step_end(self, step, logs={}):
-        for key, value in logs.get('info').items():
+    def on_step_end(self, info={}):
+        for key, value in info.items():
             if key in self.metric:
                 self.metric[key].append(value)
             else:
                 self.metric[key] = [value]
-
-
-def test_agent(agent, env, weights='agent_weights.h5f', actions=[]) -> \
-        PerformanceMetrics:
-    """
-    Run the agent in an environment and store the actions it takes in a list.
-
-    Args:
-    * `agent`: A `DDPGAgent` returned by `get_agent()`.
-    * `env`: An OpenAI `gym.Env` environment in which the agent will operate.
-    * `actions`: A list in which to store actions.
-
-    Returns:
-    * The list containing history of actions.
-    """
-    test_perf_log = PerformanceMetrics(actions)
-    agent.load_weights(weights)
-    agent.test(env, nb_episodes=1, visualize=False, verbose=2, callbacks=[test_perf_log])
-    return test_perf_log
