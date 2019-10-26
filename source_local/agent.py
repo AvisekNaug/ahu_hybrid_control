@@ -1,6 +1,6 @@
 # import modules
 import numpy as np
-
+import tensorflow as tf
 from stable_baselines import TD3
 from stable_baselines.td3.policies import MlpPolicy
 from stable_baselines.common.vec_env import DummyVecEnv
@@ -125,6 +125,14 @@ def SaveBest(_locals, _globals):
                 print("Saving new best model")
                 _locals['self'].save(rllogs + 'best_model.pkl')
     n_steps += 1
+
+    # logging the variable weights histogram
+    # Create summaries to visualize weights
+    self_ = _locals['self']
+    for var in self_.policy_out.policy.:
+        tf.summary.histogram(var.name, var)
+
+
     return True
 
 
